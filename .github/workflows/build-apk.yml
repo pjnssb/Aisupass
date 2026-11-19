@@ -1,0 +1,70 @@
+name: Build Android APK
+
+on:
+  push:
+    branches:
+      - master
+    paths-ignore:
+      - 'README*.md'
+  workflow_dispatch:
+    inputs:
+      build_mode:
+        description: 'Flutter APK build mode (release or debug)'
+        required: false
+        default: 'release'
+        type: choice
+        options:
+          - release
+          - debug
+
+permissions:
+  contents: read
+
+jobs:
+  build-android:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Prepare .env asset placeholder
+        run: |
+          if [ ! -f .env ]; then
+            if [ -f .env.example ]; then
+              cp .env.example .env
+            else
+              touch .env
+            fi
+          fi
+
+      - name: Install dependencies and generate l10n
+        run: |
+          flutter --version
+          flutter pub get
+          flutter gen-l10n
+
+      - name: Build APK
+        run: |
+          MODE="${{ github.event.inputs.build_mode || 'release' }}"
+          flutter build apk --"$MODE"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Aisupass-${{ github.event.inputs.build_mode || 'release' }}-apk
+          path: build/app/outputs/flutter-apk/*.apk
+          if-no-files-found: error
