@@ -48,7 +48,7 @@ jobs:
             if [ -f .env.example ]; then
               cp .env.example .env
             else
-              touch .env
+              printf 'API_URL=\n' > .env
             fi
           fi
 
